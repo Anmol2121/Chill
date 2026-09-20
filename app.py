@@ -1,5 +1,5 @@
 """
-Student Test Portal (v5.1) - single-file Flask app: SQLite + HTML + CSS + JavaScript.
+Student Test Portal (v5) - single-file Flask app: SQLite + HTML + CSS + JavaScript.
 
 STUDENT FLOW
     Details -> Instructions -> Timed arena (one question at a time) -> Report card
@@ -11,15 +11,7 @@ ADMIN FLOW  (/admin)
     Results (search, sort, per-student answer sheet, CSV)
     Settings (marking scheme, proctoring, student-facing toggles)
 
-What is new in v5.1
-    Flag for review : a small pill toggle on each question card (top right) instead of a
-                      button between Previous and Next. No layout jumping, works on phones.
-    Mobile          : Previous / Next bar sticks to the bottom of the screen on phones.
-    Code questions  : teachers can write ```code blocks``` and `inline code` inside questions,
-                      options and explanations. Students see a clean dark code box.
-                      Everything is escaped first, so it is safe from HTML injection.
-
-What came with v5
+What is new in v5
     Marking      : per-question marks, difficulty, topic, optional negative marking,
                    pass mark, weighted percentage.
     Analysis     : topic-wise strengths on the report card, topic + difficulty
@@ -29,6 +21,13 @@ What came with v5
     Delight      : an arena-style test screen with a live timer ring, momentum
                    counter, question drawer, sound cues, shortcut sheet, and a
                    report card that animates the score, grade and topic bars.
+
+Design notes (v5)
+    One bold element: the gradient. Electric indigo -> violet -> cyan carries the
+    timer ring, the score ring and the primary buttons; everything else is quiet
+    ink on paper. Bricolage Grotesque sets display type, Plus Jakarta Sans sets
+    running text, JetBrains Mono is kept for clocks and numbers.
+    Light and dark share one token set; the switch in the header remembers itself.
 
 Optional environment variables (everything else lives in Admin > Settings):
     SECRET_KEY       long random text (keeps sessions and result links secure)
@@ -63,7 +62,6 @@ from flask import (
     session,
     url_for,
 )
-from markupsafe import Markup, escape
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
@@ -389,22 +387,6 @@ h3{font-size:1rem;margin:0 0 4px;font-weight:700;}
 .muted{color:var(--ink-2);font-size:.9rem;}
 .tab-num{font-variant-numeric:tabular-nums;}
 
-/* ---------- code in questions ---------- */
-code{font-family:var(--mono);font-size:.88em;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;}
-pre.code{
-  margin:14px 0 18px;padding:14px 18px;background:#0D1226;color:#E6EAFB;
-  border:1px solid var(--line);border-radius:var(--r-md);overflow-x:auto;-webkit-overflow-scrolling:touch;
-  white-space:pre;tab-size:4;font-family:var(--mono);font-size:.86rem;line-height:1.65;
-  font-weight:500;letter-spacing:0;text-align:left;
-}
-pre.code code{background:none;border:0;padding:0;font-size:inherit;color:inherit;}
-.code-lang{display:block;margin-bottom:8px;font:700 .68rem var(--mono);text-transform:uppercase;letter-spacing:.08em;opacity:.55;}
-textarea.code-area{font-family:var(--mono);font-size:.9rem;tab-size:4;}
-.q-text,.rv-q,.qrow-q,.rv-x{white-space:pre-line;overflow-wrap:anywhere;}
-.qrow-q{font-weight:600;}
-.qrow > div:first-child,.rv > div:last-child{min-width:0;flex:1;}
-.opt-text{min-width:0;overflow-wrap:anywhere;}
-
 /* ---------- cards, pills ---------- */
 .card{
   border:1px solid var(--line);border-radius:var(--r-xl);padding:28px;margin-bottom:20px;
@@ -601,7 +583,7 @@ input[readonly]{background:var(--surface-2);}
 @keyframes savepop{0%{opacity:.35;}40%{opacity:1;}100%{opacity:1;}}
 
 .drawer{border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:16px;background:var(--surface);}
-.drawer-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+.drawer-top{display:flex;justify-content:space-between;align-items:center;gap:10px;}
 .drawer-top b{font-size:.92rem;font-weight:700;}
 .pal-grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px;}
 .pb{
@@ -622,33 +604,14 @@ input[readonly]{background:var(--surface-2);}
 .q{display:none;border:1px solid var(--line);border-radius:var(--r-xl);padding:28px;background:var(--surface);box-shadow:var(--shadow-1);}
 .q.active{display:block;animation:qin .34s cubic-bezier(.22,1,.36,1);}
 @keyframes qin{from{opacity:0;transform:translateY(10px) scale(.995);}to{opacity:1;transform:none;}}
-.q-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
-.q-tags{display:flex;gap:6px;flex-wrap:wrap;min-width:0;}
-.q-side{display:flex;align-items:center;gap:10px;flex:none;}
+.q-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;}
+.q-tags{display:flex;gap:6px;flex-wrap:wrap;}
 .tag{font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--ink-2);}
 .tag.easy{background:var(--good-wash);color:var(--good);}
 .tag.medium{background:var(--gold-wash);color:var(--gold);}
 .tag.hard{background:var(--bad-wash);color:var(--bad);}
 .q-count{font-family:var(--mono);font-size:.8rem;color:var(--ink-3);font-weight:700;}
-
-/* flag for review: a small pill on the question card */
-.flag-toggle{
-  display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px 0 10px;border-radius:999px;
-  border:1px solid var(--line);background:var(--surface);color:var(--ink-2);
-  font:inherit;font-size:.8rem;font-weight:700;cursor:pointer;
-  transition:background .15s,border-color .15s,color .15s;
-}
-.flag-toggle .ic{width:15px;height:15px;}
-.flag-toggle .l-on{display:none;}
-.flag-toggle:hover{border-color:var(--gold);color:var(--gold);}
-.flag-toggle[aria-pressed=true]{background:var(--gold-wash);border-color:var(--gold);color:var(--gold);}
-.flag-toggle[aria-pressed=true] .ic{fill:currentColor;}
-.flag-toggle[aria-pressed=true] .l-on{display:inline;}
-.flag-toggle[aria-pressed=true] .l-off{display:none;}
-.flag-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
-
 .q-text{font-family:var(--display);font-weight:600;font-size:1.3rem;line-height:1.34;letter-spacing:-.02em;margin-bottom:20px;}
-.q-text code{font-family:var(--mono);font-weight:500;letter-spacing:0;}
 .opt{
   position:relative;display:flex;align-items:center;gap:13px;padding:14px 16px;
   border:1px solid var(--line);border-radius:var(--r-md);margin-bottom:9px;cursor:pointer;
@@ -665,8 +628,14 @@ input[readonly]{background:var(--surface-2);}
 .opt:has(input:checked){border-color:var(--accent);background:var(--accent-wash);}
 .opt input:checked + .letter{background:var(--grad);border-color:transparent;color:#fff;animation:pop .28s cubic-bezier(.3,1.6,.5,1);}
 @keyframes pop{0%{transform:scale(.8);}60%{transform:scale(1.14);}100%{transform:scale(1);}}
-.qnav{display:flex;justify-content:space-between;gap:12px;margin-top:18px;}
-.qnav .btn{min-width:130px;}
+.qnav{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-top:18px;}
+.qnav .btn{min-width:0;max-width:100%;}
+.qnav .prev{justify-self:start;}
+.qnav .next{justify-self:end;}
+.flag-btn{justify-self:center;white-space:nowrap;}
+.flag-btn .ic{flex:none;}
+.flag-btn .flag-label{overflow:hidden;text-overflow:ellipsis;}
+.flag-btn[aria-pressed=true]{background:var(--gold-wash);border-color:var(--gold);color:var(--gold);}
 .hint{text-align:center;color:var(--ink-3);font-size:.79rem;margin-top:16px;}
 kbd{font-family:var(--mono);font-size:.74rem;background:var(--surface-2);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 5px;color:var(--ink-2);}
 
@@ -871,6 +840,9 @@ code.fmt{
   .hud-name{max-width:34vw;}
   .brand-sub{display:none;}
   .q{padding:20px 18px;}
+  .qnav{grid-template-columns:1fr 1fr;gap:9px;}
+  .qnav .flag-btn{grid-column:1 / -1;order:-1;width:100%;justify-self:stretch;}
+  .qnav .prev,.qnav .next{width:100%;justify-self:stretch;}
   .irow{grid-template-columns:1fr 46px;}
   .irow .meter{grid-column:1 / -1;order:3;}
   .tools input,.tools select{width:100%;}
@@ -879,22 +851,8 @@ code.fmt{
   .chipstat{min-width:48px;padding:5px 8px;}
   .podium{grid-template-columns:1fr;}
   .cert-in{padding:30px 18px;}
+  .qnav .btn{min-height:46px;}
   .hint{font-size:.76rem;line-height:2.1;}
-  pre.code{font-size:.8rem;padding:12px 14px;}
-  /* Previous / Next stick to the bottom of the phone screen */
-  .qnav{
-    position:sticky;bottom:0;z-index:20;margin:18px -20px 0;
-    padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));
-    background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-    border-top:1px solid var(--line);
-  }
-  .qnav .btn{flex:1;min-width:0;min-height:46px;}
-  .q-tags .tag:nth-child(3){display:none;}
-}
-@media (max-width:480px){
-  .chipstat.hot{display:none;}
-  .chipstat{min-width:46px;}
-  .hud-name{max-width:30vw;}
 }
 @media (max-width:400px){
   .wrap{padding-left:15px;padding-right:15px;}
@@ -905,11 +863,9 @@ code.fmt{
   .pb{width:34px;height:34px;font-size:.82rem;}
   .card{padding:20px 15px;}
   .chips{grid-template-columns:1fr 1fr;}
-  .qnav{margin-left:-15px;margin-right:-15px;padding-left:15px;padding-right:15px;}
 }
 @media (hover:none){
   .hint{display:none;}
-  #keys-btn{display:none;}
 }
 @media print{
   body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
@@ -974,15 +930,6 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   [].forEach.call(document.querySelectorAll('.flash.success'), function (el) {
     setTimeout(function () { el.style.opacity = '0'; setTimeout(function () { el.hidden = true; }, 400); }, 4500);
-  });
-  [].forEach.call(document.querySelectorAll('[data-code-for]'), function (b) {
-    b.addEventListener('click', function () {
-      var t = document.getElementById(b.dataset.codeFor);
-      if (!t) return;
-      var s = t.selectionStart, e = t.selectionEnd, sel = t.value.slice(s, e);
-      t.setRangeText('\\n```python\\n' + (sel || '# code yahan likho') + '\\n```\\n', s, e, 'end');
-      t.focus();
-    });
   });
 });
 window.addEventListener('pageshow', function (e) {
@@ -1114,40 +1061,6 @@ def q_topic(row):
 def q_difficulty(row):
     value = (row["difficulty"] or "medium").strip().lower()
     return value if value in DIFFICULTIES else "medium"
-
-
-# ---- rich text: ```code blocks``` and `inline code` (everything is escaped first) ----
-_CODE_BLOCK = re.compile(r"[ \t]*\n?```([A-Za-z0-9+#_-]*)[ \t]*\n(.*?)\n?```[ \t]*\n?", re.S)
-_INLINE_CODE = re.compile(r"`([^`\n]+)`")
-
-
-def _inline(chunk):
-    return _INLINE_CODE.sub(r"<code>\1</code>", str(escape(chunk)))
-
-
-@app.template_filter("rich")
-def rich(text):
-    """Safe formatting: ```code blocks``` and `inline code`. Everything else is escaped."""
-    src = str(text or "").replace("\r\n", "\n").replace("\r", "\n")
-    out, pos = [], 0
-    for m in _CODE_BLOCK.finditer(src):
-        out.append(_inline(src[pos:m.start()]))
-        lang = m.group(1).lower()
-        label = f'<span class="code-lang">{escape(lang)}</span>' if lang else ""
-        out.append(f'<pre class="code">{label}<code>{escape(m.group(2))}</code></pre>')
-        pos = m.end()
-    out.append(_inline(src[pos:]))
-    return Markup("".join(out))
-
-
-def bulk_escape(value):
-    """Keep newlines and | inside one backup line."""
-    v = str(value or "").replace("\r\n", "\n").replace("\r", "\n").strip()
-    return v.replace("\\", "\\\\").replace("\n", "\\n").replace("|", "\\p")
-
-
-def bulk_unescape(value):
-    return re.sub(r"\\([\\np])", lambda m: {"\\": "\\", "n": "\n", "p": "|"}[m.group(1)], value)
 
 
 def sign_result(rid):
@@ -1625,22 +1538,18 @@ TEST_TEMPLATE = """
         <span class="tag {{ q.difficulty }}">{{ q.difficulty }}</span>
         <span class="tag">{{ q.marks }} mark{{ '' if q.marks == '1' else 's' }}</span>
       </div>
-      <div class="q-side">
-        <span class="q-count">{{ loop.index }} / {{ questions|length }}</span>
-        <button type="button" class="flag-toggle" aria-pressed="false" title="Flag for review (F)">
-          {{ icon('flag') }}<span class="l-off">Flag</span><span class="l-on">Flagged</span>
-        </button>
-      </div>
+      <div class="q-count">{{ loop.index }} / {{ questions|length }}</div>
     </div>
-    <div class="q-text">{{ q.text|rich }}</div>
+    <div class="q-text">{{ q.text }}</div>
     {% for o in q.options %}
-    <label class="opt"><input type="radio" name="q_{{ q.id }}" value="{{ o.key }}"><span class="letter">{{ o.letter }}</span><span class="opt-text">{{ o.text|rich }}</span></label>
+    <label class="opt"><input type="radio" name="q_{{ q.id }}" value="{{ o.key }}"><span class="letter">{{ o.letter }}</span><span>{{ o.text }}</span></label>
     {% endfor %}
   </section>
   {% endfor %}
 
   <div class="qnav">
-    <button class="btn btn-ghost prev" type="button" id="prev-btn">{{ icon('arrow-left') }}Previous</button>
+    <button class="btn btn-ghost prev" type="button" id="prev-btn">Previous</button>
+    <button class="btn btn-ghost flag-btn" type="button" id="mark-btn" aria-pressed="false">{{ icon('flag') }}<span class="flag-label">Flag for review</span></button>
     <button class="btn next" type="button" id="next-btn">Next</button>
   </div>
   <p class="hint"><kbd>1</kbd>&ndash;<kbd>4</kbd> pick an option &middot; <kbd>&larr;</kbd> <kbd>&rarr;</kbd> move &middot; <kbd>F</kbd> flag &middot; <kbd>?</kbd> shortcuts</p>
@@ -1697,6 +1606,8 @@ TEST_TEMPLATE = """
   var statRun = document.getElementById('stat-run');
   var prevBtn = document.getElementById('prev-btn');
   var nextBtn = document.getElementById('next-btn');
+  var markBtn = document.getElementById('mark-btn');
+  var markLabel = markBtn.querySelector('.flag-label');
   var dlg = document.getElementById('summary');
   var keysheet = document.getElementById('keysheet');
   var state = { cur: 0, flags: {}, lost: 0 };
@@ -1753,10 +1664,10 @@ TEST_TEMPLATE = """
     bar.style.width = (TOTAL ? (c.answered / TOTAL) * 100 : 0) + '%';
     prevBtn.disabled = state.cur === 0;
     nextBtn.textContent = state.cur === TOTAL - 1 ? 'Review and submit' : 'Next';
-    qs.forEach(function (q, i) {
-      var fb = q.querySelector('.flag-toggle');
-      if (fb) fb.setAttribute('aria-pressed', state.flags[i] ? 'true' : 'false');
-    });
+    var on = !!state.flags[state.cur];
+    markBtn.classList.toggle('on', on);
+    markLabel.textContent = on ? 'Flagged for review' : 'Flag for review';
+    markBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
   }
 
   function go(i, quiet) {
@@ -1766,12 +1677,6 @@ TEST_TEMPLATE = """
     render();
     save();
     window.scrollTo(0, 0);
-  }
-
-  function toggleFlag(i) {
-    if (i < 0) return;
-    if (state.flags[i]) delete state.flags[i]; else state.flags[i] = true;
-    render(); save(true);
   }
 
   function makeJump(listId, wrapId, indexes) {
@@ -1832,9 +1737,9 @@ TEST_TEMPLATE = """
   nextBtn.addEventListener('click', function () {
     if (state.cur === TOTAL - 1) openSummary(); else go(state.cur + 1);
   });
-  form.addEventListener('click', function (e) {
-    var fb = e.target.closest && e.target.closest('.flag-toggle');
-    if (fb) toggleFlag(qs.indexOf(fb.closest('.q')));
+  markBtn.addEventListener('click', function () {
+    if (state.flags[state.cur]) delete state.flags[state.cur]; else state.flags[state.cur] = true;
+    render(); save(true);
   });
   pbs.forEach(function (b) { b.addEventListener('click', function () { go(parseInt(b.dataset.i, 10)); }); });
   document.getElementById('finish-btn').addEventListener('click', openSummary);
@@ -1854,7 +1759,7 @@ TEST_TEMPLATE = """
       if (radios[idx]) { radios[idx].checked = true; radios[idx].dispatchEvent(new Event('change', { bubbles: true })); }
     } else if (e.key === 'ArrowRight') { go(state.cur + 1); }
     else if (e.key === 'ArrowLeft') { go(state.cur - 1); }
-    else if (k === 'f') { toggleFlag(state.cur); }
+    else if (k === 'f') { markBtn.click(); }
     else if (k === 's') { openSummary(); }
     else if (k === '?') { if (keysheet.showModal) keysheet.showModal(); }
   });
@@ -2055,10 +1960,10 @@ REPORT_TEMPLATE = """
         <div class="rv-mark {{ r.status }}">{% if r.status == 'ok' %}&#10003;{% elif r.status == 'bad' %}&#10005;{% else %}&ndash;{% endif %}</div>
         <div>
           <div class="rv-meta">{{ r.topic }} &middot; {{ r.difficulty }} &middot; {{ r.marks }} mark{{ '' if r.marks == '1' else 's' }}</div>
-          <div class="rv-q">{{ r.number }}. {{ r.question|rich }}</div>
-          <div class="rv-a">Your answer: <b>{{ r.your|rich }}</b></div>
-          {% if r.status != 'ok' %}<div class="rv-a">Correct answer: <b class="good">{{ r.correct|rich }}</b></div>{% endif %}
-          {% if r.status != 'ok' and r.explanation %}<div class="rv-x">{{ r.explanation|rich }}</div>{% endif %}
+          <div class="rv-q">{{ r.number }}. {{ r.question }}</div>
+          <div class="rv-a">Your answer: <b>{{ r.your }}</b></div>
+          {% if r.status != 'ok' %}<div class="rv-a">Correct answer: <b class="good">{{ r.correct }}</b></div>{% endif %}
+          {% if r.status != 'ok' and r.explanation %}<div class="rv-x">{{ r.explanation }}</div>{% endif %}
         </div>
       </div>
       {% endfor %}
@@ -2665,10 +2570,9 @@ DASHBOARD_TEMPLATE = """
       <h2>Add one question</h2>
       <p class="lead" style="margin-bottom:20px;">Four options, one correct answer.</p>
       <form method="POST" action="{{ url_for('add_question') }}">
-        <label class="field"><span>Question <small>for code, start and end with ```</small></span>
-          <textarea id="new-q" name="question_text" rows="5" required class="code-area" placeholder="Type the question"></textarea>
+        <label class="field"><span>Question</span>
+          <input type="text" name="question_text" required placeholder="Type the question">
         </label>
-        <button type="button" class="btn btn-ghost btn-sm" data-code-for="new-q" style="margin:-6px 0 16px;">Insert code block</button>
         <div class="grid2">
           <label class="field"><span>Option A</span><input type="text" name="option_a" required></label>
           <label class="field"><span>Option B</span><input type="text" name="option_b" required></label>
@@ -2709,7 +2613,7 @@ DASHBOARD_TEMPLATE = """
         </label>
         <button class="btn btn-full" type="submit">Add all questions</button>
       </form>
-      <p class="muted" style="margin:14px 0 0;">This is also how you restore a backup file: open it, copy everything, paste it here. For code inside a bulk line, write \\n for a new line and \\p for a | symbol. For long code questions the "Add one question" form is easier.</p>
+      <p class="muted" style="margin:14px 0 0;">This is also how you restore a backup file: open it, copy everything, paste it here.</p>
     </section>
   </div>
 
@@ -2729,7 +2633,7 @@ DASHBOARD_TEMPLATE = """
     {% for q in questions %}
     <div class="qrow" data-topic="{{ (q.topic or 'General')|lower }}">
       <div>
-        <div class="qrow-q"><b>{{ loop.index }}.</b> {{ q.question_text|rich }}</div>
+        <b>{{ loop.index }}. {{ q.question_text }}</b>
         <div class="opts">
           {% for letter, key in [('A','option_a'),('B','option_b'),('C','option_c'),('D','option_d')] %}
             <span class="{{ 'right' if letter|lower == q.correct_option else '' }}">{{ letter }}. {{ q[key] }}</span>{% if not loop.last %} &nbsp; {% endif %}
@@ -3036,9 +2940,9 @@ RESULT_TEMPLATE = """
         <div class="rv-mark {{ x.status }}">{% if x.status == 'ok' %}&#10003;{% elif x.status == 'bad' %}&#10005;{% else %}&ndash;{% endif %}</div>
         <div>
           <div class="rv-meta">{{ x.topic }} &middot; {{ x.difficulty }} &middot; {{ x.marks }} mark{{ '' if x.marks == '1' else 's' }}</div>
-          <div class="rv-q">{{ x.number }}. {{ x.question|rich }}</div>
-          <div class="rv-a">Student answered: <b>{{ x.your|rich }}</b></div>
-          {% if x.status != 'ok' %}<div class="rv-a">Correct answer: <b class="good">{{ x.correct|rich }}</b></div>{% endif %}
+          <div class="rv-q">{{ x.number }}. {{ x.question }}</div>
+          <div class="rv-a">Student answered: <b>{{ x.your }}</b></div>
+          {% if x.status != 'ok' %}<div class="rv-a">Correct answer: <b class="good">{{ x.correct }}</b></div>{% endif %}
         </div>
       </div>
       {% endfor %}
@@ -3084,10 +2988,9 @@ EDIT_TEMPLATE = """
     <h1>Edit question</h1>
     <p class="lead">Changes apply to students who start after you save.</p>
     <form method="POST">
-      <label class="field"><span>Question <small>for code, start and end with ```</small></span>
-        <textarea id="edit-q" name="question_text" rows="6" required class="code-area">{{ q.question_text }}</textarea>
+      <label class="field"><span>Question</span>
+        <input type="text" name="question_text" required value="{{ q.question_text }}">
       </label>
-      <button type="button" class="btn btn-ghost btn-sm" data-code-for="edit-q" style="margin:-6px 0 16px;">Insert code block</button>
       <div class="grid2">
         <label class="field"><span>Option A</span><input type="text" name="option_a" required value="{{ q.option_a }}"></label>
         <label class="field"><span>Option B</span><input type="text" name="option_b" required value="{{ q.option_b }}"></label>
@@ -3123,8 +3026,7 @@ EDIT_TEMPLATE = """
 
 
 def read_question_form():
-    raw = request.form.get("question_text", "").replace("\r\n", "\n").replace("\r", "\n").strip()
-    text = "\n".join(line.rstrip() for line in raw.split("\n"))[:4000]
+    text = " ".join(request.form.get("question_text", "").split())
     options = [" ".join(request.form.get(f"option_{k}", "").split()) for k in "abcd"]
     correct = request.form.get("correct_option", "")
     explanation = request.form.get("explanation", "").strip()[:400]
@@ -3195,7 +3097,7 @@ def bulk_add():
         line = raw.strip()
         if not line:
             continue
-        parts = [bulk_unescape(p.strip()) for p in line.split("|")]
+        parts = [p.strip() for p in line.split("|")]
         core, extra = parts[:6], parts[6:]
         if len(core) != 6 or not all(core) or core[5].lower() not in OPTION_KEYS:
             bad_lines.append(str(number))
@@ -3233,7 +3135,8 @@ def export_questions():
     with closing(get_db()) as conn:
         questions = conn.execute("SELECT * FROM questions ORDER BY id").fetchall()
 
-    clean = bulk_escape
+    def clean(value):
+        return str(value or "").replace("|", "/").replace("\r", " ").replace("\n", " ").strip()
 
     lines = []
     for q in questions:
